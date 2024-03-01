@@ -17,7 +17,8 @@ sequenceDiagram
   activate server
   server -->> browser: the JavaScript file
   deactivate server
-  Note right of browser: The browser starts executing the JavaScript file that fetches the JSON file from the server and adds potential new notes to the JSON file as well as rendering them using DOM-api
+  Note right of browser: The browser starts executing the JavaScript file that fetches the JSON file from the server
+  Note right of browser: and adds HTML-elements representing the notes utilizing the DOM-api so the notes can be updated without reloading the page
 
   browser ->> server: GET https://studies.cs.helsinki.fi/exampleapp/data.json
   activate server
