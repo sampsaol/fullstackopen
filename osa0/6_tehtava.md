@@ -7,5 +7,5 @@ sequenceDiagram
   activate server
   server -->> browser: note created
   deactivate server
-  Note right of browser: the browser uses the HTML-elements created utilizing the DOM-api when the page was first loaded to add the note to the JSON file as well as updating the page
+  Note right of browser: The browser updates the HTML elements by adding the given note as well as updating the JSON-file without reloading the page
 ```
