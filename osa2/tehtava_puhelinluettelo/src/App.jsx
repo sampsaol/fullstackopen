@@ -7,13 +7,53 @@ import Filter from './components/Filter'
 import PersonForm from './components/PersonForm'
 // props needed are addPerson, handlePersonChange, handleNumberChange, newName and newNumber --  responsible for name and number forms
 
+const Notification = ({ message, type }) => {
+  const confirmNotificationStyle = {
+    color: 'green',
+    background: 'lightgrey',
+    fontSize: 20,
+    borderStyle: 'solid',
+    borderRadius: 5,
+    padding: 10,
+    marginBottom: 10
 
+  }
+
+  const errorNotificationStyle = {
+    color: 'red',
+    background: 'lightgrey',
+    fontSize: 20,
+    borderStyle: 'solid',
+    borderRadius: 5,
+    padding: 10,
+    marginBottom: 10
+
+  }
+  if (message === null) {
+    return null
+  }
+  if (type === 'confirm'){
+    return (
+      <div style={confirmNotificationStyle}>
+        {message}
+      </div>
+    )
+    }
+  return (
+    <div style={errorNotificationStyle}>
+      {message}
+    </div>
+  )
+  
+}
 
 const App = () => {
   const [persons, setPersons] = useState([])
   const [newName, setNewName] = useState('')
   const [newNumber, setNewNumber] = useState('')
   const [newFilter, setNewFilter] = useState('')
+  const [confirmMessage, setConfirmMessage] = useState(null)
+  const [confirmMessageType, setConfirmMessageType] = useState('confirm')
 
   useEffect(() => {
     personService
@@ -37,7 +77,28 @@ const App = () => {
               .getAll()
                 .then(updatedPersons => {
                     setPersons(updatedPersons)
-              }))
+                    setConfirmMessageType('confirm')
+                    setConfirmMessage(
+                      `Updated ${newName}'s number`
+                    )
+                    setTimeout(() => {
+                      setConfirmMessage(null)
+                    }, 5000)
+             }))
+        .catch(error => {
+          setConfirmMessageType('error')
+          setConfirmMessage(
+            `Information of ${newName} has already been removed from server`
+          )
+          personService
+          .getAll()
+            .then(initialPersons => {
+            setPersons(initialPersons)
+          })
+          setTimeout(() => {
+            setConfirmMessage(null)
+          }, 5000)
+        })
       }
     }
     else {
@@ -45,6 +106,13 @@ const App = () => {
         .create(personObject)
           .then(returnedPerson => {
             setPersons(persons.concat(returnedPerson))
+            setConfirmMessageType('confirm')
+            setConfirmMessage(
+              `Added ${newName}`
+            )
+            setTimeout(() => {
+              setConfirmMessage(null)
+            }, 5000)
             setNewName('')
             setNewNumber('')
           })
@@ -60,6 +128,13 @@ const App = () => {
               .getAll()
                 .then(updatedPersons => {
                     setPersons(updatedPersons)
+                    setConfirmMessageType('confirm')
+                    setConfirmMessage(
+                      `Removed ${newName}`
+                    )
+                    setTimeout(() => {
+                      setConfirmMessage(null)
+                    }, 5000)
               }))
     }
 
@@ -80,6 +155,7 @@ const App = () => {
   return (
     <div>
       <h2>Phonebook</h2>
+      <Notification message={confirmMessage} type={confirmMessageType}/>
       <Filter handleFilterChange={handleFilterChange} newFilter={newFilter}/>
       <h3>Add a new</h3>
       <PersonForm addPerson={addPerson}
