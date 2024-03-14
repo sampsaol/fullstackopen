@@ -66,12 +66,13 @@ const App = () => {
   const addPerson = (event) => {
     event.preventDefault()
     const personObject = { name: newName, number: newNumber}
-    const nameCheck = persons.find((element) => element.name === newName)
+    const nameCheck = persons.find((element) => element.name == newName)
     if (nameCheck) {
       if (window.confirm(`${newName} is already added to phonebook, replace the old number with a new one?`)){
         const updatedPerson = {...nameCheck, number: newNumber}
+        console.log(updatedPerson)
         personService
-          .updateNumber(updatedPerson, nameCheck.id, newNumber)
+          .updateNumber(updatedPerson, updatedPerson.id)
             .then(() => 
             personService
               .getAll()
@@ -86,15 +87,14 @@ const App = () => {
                     }, 5000)
              }))
         .catch(error => {
-          setConfirmMessageType('error')
-          setConfirmMessage(
-            `Information of ${newName} has already been removed from server`
-          )
-          personService
+           setConfirmMessageType('error')
+          setConfirmMessage(error.response.data.error)
+          console.log(error.response.data)
+/*           personService
           .getAll()
             .then(initialPersons => {
             setPersons(initialPersons)
-          })
+          }) */
           setTimeout(() => {
             setConfirmMessage(null)
           }, 5000)
@@ -116,6 +116,14 @@ const App = () => {
             setNewName('')
             setNewNumber('')
           })
+      .catch(error => {
+        setConfirmMessageType('error')
+        setConfirmMessage(error.response.data.error)
+        console.log(error.response.data)
+        setTimeout(() => {
+          setConfirmMessage(null)
+        }, 5000)
+      })
     }
   }
 
