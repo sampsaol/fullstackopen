@@ -1,29 +1,46 @@
-const { test, after, beforeEach, describe } = require('node:test')
+const { test, after, beforeEach, describe, before } = require('node:test')
 const assert = require('node:assert')
 const mongoose = require('mongoose')
 const supertest = require('supertest')
 const app = require('../app')
+const TOKEN = 'secretvalue'
 const api = supertest(app)
 const bcrypt = require('bcrypt')
+const jwt = require('jsonwebtoken')
 
 const helper = require('./test_helper')
 
 const Blog = require('../models/blog')
 const User = require('../models/user')
 
-beforeEach(async () => {
-  await Blog.deleteMany({})
-
-  await Blog.insertMany(helper.initialBlogs)
-})
-
-
-describe('when there are initially some blogs saved', () => {  
+describe.only('when there are initially some blogs saved', () => {  
+  var token = ''
+  var user = {}
+  before(async () => {
+    await User.deleteMany({})
+    const testUser = await api
+      .post('/api/users')
+      .send(helper.initialUser)
+      .expect(201)
+    const res = await api
+      .post('/api/login')
+      .send(helper.initialUser)
+      .expect(200)
+    token = `Bearer ${res.body.token}`
+    user = await User.findOne({username: helper.initialUser.username})
+  })
   beforeEach(async () => {
     await Blog.deleteMany({})
-  
-    await Blog.insertMany(helper.initialBlogs)
+    const blogsToSave = helper.initialBlogs.map(r => {
+      return {...r, user: user._id}
+    })
+    await Blog.insertMany(blogsToSave)
+    //const currentBlogs = await helper.blogsInDb()
+    //user.blogs = user.blogs.concat(currentBlogs[0]._id)
+    //user.blogs = user.blogs.concat(currentBlogs[1]._id)
+    //await user.save()
   })
+
   test('blogs are returned as json', async () => {
     await api
       .get('/api/blogs')
@@ -49,12 +66,13 @@ describe('when there are initially some blogs saved', () => {
       const newBlog = {
         title: "testblog is nice to test",
         author: "testo testman",
-        url: "cledos university"
+        url: "cledos university",
+        user: user._id
       }
-
       const blogsAtStart = await helper.blogsInDb()
       await api
         .post('/api/blogs')
+        .set('Authorization', token)
         .send(newBlog)
         .expect(201)
         .expect('Content-Type', /application\/json/)
@@ -70,10 +88,12 @@ describe('when there are initially some blogs saved', () => {
       const newBlog = {
           title: "testblog is nice to test",
           author: "testo testman",
-          url: "cledos university"
+          url: "cledos university",
+          user: user._id
         }
         await api
           .post('/api/blogs')
+          .set('Authorization', token)
           .send(newBlog)
           .expect(201)
           .expect('Content-Type', /application\/json/)
@@ -86,10 +106,12 @@ describe('when there are initially some blogs saved', () => {
     test('if title is not given, new blog wont be posted', async () => {
       const newBlog = {
         author: "TestMan",
-        url: "www.thisdoesexist.com"
+        url: "www.thisdoesexist.com",
+        user: user._id
       }
       await api
         .post('/api/blogs')
+        .set('Authorization', token)
         .send(newBlog)
         .expect(400)
 
@@ -101,10 +123,12 @@ describe('when there are initially some blogs saved', () => {
     test('if url not given, blog is not posted', async () => {
       const newBlog = {
         title: "kebab tastes tasty",
-        author: "TestMan"
+        author: "TestMan",
+        user: user._id
       }
       await api
         .post('/api/blogs')
+        .set('Authorization', token)
         .send(newBlog)
         .expect(400)
 
@@ -121,6 +145,7 @@ describe('when there are initially some blogs saved', () => {
 
       await api
         .delete(`/api/blogs/${blogToDelete.id}`)
+        .set('Authorization', token)
         .expect(204)
 
       const blogsAtEnd = await helper.blogsInDb()
@@ -138,6 +163,7 @@ describe('when there are initially some blogs saved', () => {
 
       await api
         .put(`/api/blogs/${blogToUpdate.id}`)
+        .set('Authorization', token)
         .send(blogToUpdate)
         .expect(200)
       
@@ -146,9 +172,33 @@ describe('when there are initially some blogs saved', () => {
       assert.strictEqual(blogsAtEnd[0].likes, 10)
     })
   })
+  describe('token acts correctly', () => {
+    test('a request without token gets denied with 401', async () => {
+      const newBlog = {
+        title: "testblog is nice to test",
+        author: "testo testman",
+        url: "cledos university",
+        user: user._id
+      }
+      const blogsAtStart = await helper.blogsInDb()
+      await api
+        .post('/api/blogs')
+        .send(newBlog)
+        .expect(401)
+  
+      const response = await api.get('/api/blogs')
+      const contents = response.body.map(r => r.title)
+  
+      assert(!(contents.includes('testblog is nice to test')))
+      assert(contents.length === blogsAtStart.length)
+  
+    })
+  })
 })
 
-describe.only('when there is initially one user at db', () => {
+
+
+describe('when there is initially one user at db', () => {
   beforeEach(async () => {
     await User.deleteMany()
 
@@ -260,6 +310,7 @@ describe.only('when there is initially one user at db', () => {
       assert.strictEqual(usersAtStart.length, usersAtEnd.length)
     })
 })
+
 
 
 after(async () => {
